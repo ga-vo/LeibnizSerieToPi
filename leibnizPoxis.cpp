@@ -18,7 +18,6 @@ struct argsP
 
 void *suma(void *input)
 {
-
     for (int i = ((struct argsP *)input)->ini; i < ((struct argsP *)input)->fin; i++)
     {
         *((struct argsP *)input)->sum += (pow(-1, i) / (2 * i + 1));
@@ -41,11 +40,11 @@ int main()
     max = stoi(ent);
     std::cout << "\n---- Using " << NUMBER_OF_CORES << " cores ----" << std::endl;
 
-    pthread_t tids[NUMBER_OF_CORES];
-    struct argsP *argumentosArray[NUMBER_OF_CORES];
+    pthread_t tids[NUMBER_OF_CORES-1];
+    struct argsP *argumentosArray[NUMBER_OF_CORES-1];
     auto start1 = high_resolution_clock::now();
 
-    for (int i = 0; i < NUMBER_OF_CORES; i++)
+    for (int i = 0; i < NUMBER_OF_CORES-1; i++)
     {
         argumentosArray[i] = (struct argsP *)malloc(sizeof(struct argsP));
         argumentosArray[i]->ini = (int)i * (double)max / NUMBER_OF_CORES;
@@ -53,8 +52,15 @@ int main()
         argumentosArray[i]->sum = new double(0);
         pthread_create(&tids[i], NULL, suma, (void *)argumentosArray[i]);
     }
+    
     double total = 0;
-    for (int i = 0; i < NUMBER_OF_CORES; i++)
+    struct argsP *argumentos1;
+    argumentos1->ini = (int)NUMBER_OF_CORES-2 * (double)max / NUMBER_OF_CORES;
+    argumentos1->fin = (int)NUMBER_OF_CORES-1 * (double)max / NUMBER_OF_CORES;
+    argumentos1->sum = new double(0);
+    suma((void *)argumentos1)   ;
+    total += *argumentos1->sum;
+    for (int i = 0; i < NUMBER_OF_CORES-1; i++)
     {
         pthread_join(tids[i], NULL);
         total += *(argumentosArray[i]->sum);
@@ -72,8 +78,7 @@ int main()
     // omp_set_num_threads((NUMBER_OF_CORES))
     // Parallel
     auto start = high_resolution_clock::now();
-#pragma omp parallel for reduction(+ \
-                                   : sum) num_threads(NUMBER_OF_CORES)
+#pragma omp parallel for reduction(+: sum) num_threads(NUMBER_OF_CORES)
     for (int i = 0; i < max; i++)
     {
         sum = sum + (pow(-1, i) / (2 * i + 1));
